@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Azul — Il gioco degli azulejos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;1,9..144,600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+<header class="topbar">
+  <div class="brand">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <span class="brand-name">Azul</span>
+  </div>
+  <div id="connection-pill" class="pill pill--offline">offline</div>
+</header>
+
+<main id="app">
+
+  <!-- LOBBY -->
+  <section id="view-home" class="view">
+    <div class="hero">
+      <h1>Decora le pareti del Palazzo Reale di Évora</h1>
+      <p class="hero-sub">Crea una nuova partita o unisciti a una partita esistente con il codice che ti hanno dato.</p>
+    </div>
+
+    <div class="lobby-grid">
+      <div class="card">
+        <h2>Nuova partita</h2>
+        <label class="field">
+          <span>Il tuo nome</span>
+          <input type="text" id="create-name" placeholder="es. Peter" maxlength="24" />
+        </label>
+        <button id="btn-create" class="btn btn--primary">Crea partita</button>
+      </div>
+
+      <div class="card">
+        <h2>Unisciti a una partita</h2>
+        <label class="field">
+          <span>Codice partita</span>
+          <input type="text" id="join-code" placeholder="es. a1b2c3d4" maxlength="8" />
+        </label>
+        <label class="field">
+          <span>Il tuo nome</span>
+          <input type="text" id="join-name" placeholder="es. Andrea" maxlength="24" />
+        </label>
+        <button id="btn-join" class="btn btn--secondary">Unisciti</button>
+      </div>
+    </div>
+
+    <p id="home-error" class="error-text" hidden></p>
+  </section>
+
+  <!-- LOBBY WAITING ROOM -->
+  <section id="view-lobby" class="view" hidden>
+    <div class="card card--wide">
+      <h2>Sala d'attesa</h2>
+      <p>Condividi questo codice con gli altri giocatori:</p>
+      <div class="game-code" id="lobby-code">--------</div>
+      <ul id="lobby-players" class="player-list"></ul>
+      <button id="btn-start" class="btn btn--primary" hidden>Inizia la partita</button>
+      <p class="muted" id="lobby-hint">In attesa che l'host avvii la partita&hellip;</p>
+    </div>
+  </section>
+
+  <!-- GAME VIEW -->
+  <section id="view-game" class="view" hidden>
+    <div class="game-layout">
+
+      <div class="board-column">
+        <div class="turn-banner" id="turn-banner"></div>
+
+        <div class="factories" id="factories"></div>
+
+        <div class="center-pool">
+          <h3>Centro tavolo</h3>
+          <div class="tile-row" id="center-tiles"></div>
+        </div>
+
+        <div class="selection-bar" id="selection-bar" hidden>
+          <span id="selection-label"></span>
+          <div class="line-choices" id="line-choices"></div>
+        </div>
+
+        <div id="log-panel" class="log-panel">
+          <h3>Cronologia</h3>
+          <ul id="log-list"></ul>
+        </div>
+      </div>
+
+      <div class="players-column" id="players-column"></div>
+
+    </div>
+  </section>
+
+  <!-- END GAME -->
+  <section id="view-end" class="view" hidden>
+    <div class="card card--wide">
+      <h2 id="end-title">Partita conclusa</h2>
+      <ol id="end-scores" class="score-list"></ol>
+      <button id="btn-back-home" class="btn btn--primary">Torna alla home</button>
+    </div>
+  </section>
+
+</main>
+
+<template id="tpl-factory">
+  <div class="factory">
+    <div class="factory-tiles"></div>
+  </div>
+</template>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="js/api.js"></script>
+<script src="js/render.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

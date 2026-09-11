@@ -1,0 +1,19 @@
+services:
+  backend:
+    build: ./backend
+    container_name: azul-backend
+    environment:
+      - PORT=4000
+      - CORS_ORIGIN=*
+    expose:
+      - "4000"
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    container_name: azul-frontend
+    depends_on:
+      - backend
+    ports:
+      - "8080:80"
+    restart: unless-stopped
