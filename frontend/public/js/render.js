@@ -77,31 +77,22 @@ const Render = {
     });
   },
 
-  selectionBar({ bar, label, choices }, state, myBoard, isMyTurn, onChoose) {
+  
+  selectionBar({ bar, label }, state, isMyTurn) {
     const showIt = isMyTurn && state.pendingSelection;
     bar.hidden = !showIt;
     if (!showIt) return;
-
     const { color, count } = state.pendingSelection;
-    label.textContent = `Hai preso ${count} tessera/e ${COLOR_LABELS[color] || color}: scegli dove posizionarle.`;
-    choices.innerHTML = '';
+    label.textContent = `Hai preso ${count} tessera/e ${COLOR_LABELS[color] || color}.`;
+  },
 
-    for (let i = 0; i < 5; i += 1) {
-      const canPlace = myBoard.patternLines[i].length < i + 1 &&
-        (myBoard.patternLines[i].length === 0 || myBoard.patternLines[i][0] === color) &&
-        !myBoard.wall[i].includes(color);
-      const btn = document.createElement('button');
-      btn.className = 'line-choice-btn';
-      btn.textContent = `Riga ${i + 1}`;
-      btn.disabled = !canPlace;
-      btn.addEventListener('click', () => onChoose(i));
-      choices.appendChild(btn);
-    }
-    const floorBtn = document.createElement('button');
-    floorBtn.className = 'line-choice-btn floor';
-    floorBtn.textContent = 'Fila scarti';
-    floorBtn.addEventListener('click', () => onChoose(-1));
-    choices.appendChild(floorBtn);
+  canPlaceOnLine(board, lineIndex, color) {
+    const line = board.patternLines[lineIndex];
+    const capacity = lineIndex + 1;
+    if (line.length >= capacity) return false;
+    if (line.length > 0 && line[0] !== color) return false;
+    if (board.wall[lineIndex].includes(color)) return false;
+    return true;
   },
 
   log(state, container) {
@@ -113,7 +104,10 @@ const Render = {
     });
   },
 
-  playerBoards(state, myPlayerId, container) {
+  playerBoards(state, myPlayerId, container, interaction = {}) {
+    const { isMyPendingTurn = false, onChooseLine = () => {} } = interaction;
+    const pendingColor = state.pendingSelection ? state.pendingSelection.color : null;
+
     container.innerHTML = '';
     // Show "me" first, then others in turn order for readability.
     const ordered = [...state.players].sort((a, b) => {
@@ -123,10 +117,11 @@ const Render = {
     });
 
     ordered.forEach((p) => {
+      const isMe = p.playerId === myPlayerId;
       const wrap = document.createElement('div');
       wrap.className = 'player-board';
       if (p.playerId === state.currentPlayerId) wrap.classList.add('active');
-      if (p.playerId === myPlayerId) wrap.classList.add('me');
+      if (isMe) wrap.classList.add('me');
 
       const header = document.createElement('div');
       header.className = 'player-header';
@@ -152,6 +147,21 @@ const Render = {
         for (let i = 0; i < capacity; i += 1) {
           rowEl.appendChild(i < line.length ? tileEl(line[i]) : emptySlotEl());
         }
+
+        if (isMe && isMyPendingTurn) {
+          const canPlace = Render.canPlaceOnLine(p, rowIdx, pendingColor);
+          rowEl.classList.add(canPlace ? 'selectable' : 'unselectable');
+          if (canPlace) {
+            rowEl.setAttribute('role', 'button');
+            rowEl.setAttribute('tabindex', '0');
+            rowEl.setAttribute('aria-label', `Posiziona sulla riga pattern ${rowIdx + 1}`);
+            rowEl.addEventListener('click', () => onChooseLine(rowIdx));
+            rowEl.addEventListener('keydown', (e) => {
+              if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onChooseLine(rowIdx); }
+            });
+          }
+        }
+
         patternWrap.appendChild(rowEl);
       });
 
@@ -188,6 +198,18 @@ const Render = {
         }
         floorWrap.appendChild(slot);
       }
+
+      if (isMe && isMyPendingTurn) {
+        floorWrap.classList.add('selectable');
+        floorWrap.setAttribute('role', 'button');
+        floorWrap.setAttribute('tabindex', '0');
+        floorWrap.setAttribute('aria-label', 'Posiziona nella fila scarti');
+        floorWrap.addEventListener('click', () => onChooseLine(-1));
+        floorWrap.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onChooseLine(-1); }
+        });
+      }
+
       wrap.appendChild(floorWrap);
 
       container.appendChild(wrap);

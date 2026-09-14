@@ -223,12 +223,19 @@ class Game {
     this._addLog('Wall-tiling phase.');
     // Process in turn order starting from the current starting player, purely for determinism.
     for (const player of this.players) {
-      const { discardedToLid } = player.runWallTiling();
+      const { discardedToLid, events } = player.runWallTiling();
       this.lid.push(...discardedToLid);
+
+      events.forEach(({ color, points }) => {
+        this._addLog(`${player.name} scores ${points} point(s) placing a ${color} tile (total: ${player.score}).`);
+      });
+
       const { penalty, discardedColors } = player.applyFloorPenaltyAndClear();
       this.lid.push(...discardedColors);
       if (penalty !== 0) {
-        this._addLog(`${player.name} loses ${Math.abs(penalty)} point(s) from the floor line.`);
+        this._addLog(
+          `${player.name} loses ${Math.abs(penalty)} point(s) from the floor line (total: ${player.score}).`
+        );
       }
     }
   }
@@ -239,7 +246,13 @@ class Game {
 
   _finishGame() {
     this.status = 'finished';
-    this.players.forEach((p) => p.applyEndGameBonuses());
+    this.players.forEach((p) => {
+      const { horizontal, vertical, colorSets } = p.applyEndGameBonuses();
+      this._addLog(
+        `${p.name} end-game bonuses: +${horizontal} (rows), +${vertical} (columns), ` +
+          `+${colorSets} (color sets) — final score: ${p.score}.`
+      );
+    });
 
     let best = Math.max(...this.players.map((p) => p.score));
     let contenders = this.players.filter((p) => p.score === best);

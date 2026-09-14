@@ -102,21 +102,20 @@ function renderGame(state) {
     onPick: (color) => doAction(() => Api.pickFromCenter(AppState.gameId, myPlayerId, color)),
   });
 
-  const myBoard = state.players.find((p) => p.playerId === myPlayerId);
   Render.selectionBar(
     {
       bar: document.getElementById('selection-bar'),
       label: document.getElementById('selection-label'),
-      choices: document.getElementById('line-choices'),
     },
     state,
-    myBoard,
-    isMyPendingTurn,
-    (lineIndex) => doAction(() => Api.placeSelection(AppState.gameId, myPlayerId, lineIndex))
+    isMyPendingTurn
   );
 
   Render.log(state, document.getElementById('log-list'));
-  Render.playerBoards(state, myPlayerId, document.getElementById('players-column'));
+  Render.playerBoards(state, myPlayerId, document.getElementById('players-column'), {
+    isMyPendingTurn,
+    onChooseLine: (lineIndex) => doAction(() => Api.placeSelection(AppState.gameId, myPlayerId, lineIndex)),
+  });
 }
 
 async function doAction(fn) {
