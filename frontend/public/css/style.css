@@ -234,19 +234,20 @@ h1, h2, h3 {
 .tile.clickable { cursor: pointer; }
 .tile.clickable:hover { transform: scale(1.08); }
 .tile.marker {
-  background: repeating-linear-gradient(45deg, #fff, #fff 4px, var(--azul-deep) 4px, var(--azul-deep) 8px);
+  background: repeating-linear-gradient(45deg, #fff, #fff 12.5%, var(--azul-deep) 12.5%, var(--azul-deep) 25%);
 }
+
 .tile--blue { 
   background: radial-gradient(circle at 30% 30%, #4691c8 0%, var(--tile-blue) 60%); 
 }
 .tile--yellow {
   background-color: var(--tile-yellow);
   background-image:
-    radial-gradient(circle at 0 0, transparent 4px, var(--tile-red) 4.5px, var(--tile-red) 6px, transparent 6.5px),
-    radial-gradient(circle at 100% 0, transparent 4px, var(--tile-red) 4.5px, var(--tile-red) 6px, transparent 6.5px),
-    radial-gradient(circle at 0 100%, transparent 4px, var(--tile-red) 4.5px, var(--tile-red) 6px, transparent 6.5px),
-    radial-gradient(circle at 100% 100%, transparent 4px, var(--tile-red) 4.5px, var(--tile-red) 6px, transparent 6.5px);
-  background-size: 16px 16px;
+    radial-gradient(circle at 0 0, transparent 25%, var(--tile-red) 28%, var(--tile-red) 37.5%, transparent 41%),
+    radial-gradient(circle at 100% 0, transparent 25%, var(--tile-red) 28%, var(--tile-red) 37.5%, transparent 41%),
+    radial-gradient(circle at 0 100%, transparent 25%, var(--tile-red) 28%, var(--tile-red) 37.5%, transparent 41%),
+    radial-gradient(circle at 100% 100%, transparent 25%, var(--tile-red) 28%, var(--tile-red) 37.5%, transparent 41%);
+  background-size: 50% 50%;
 }
 .tile--red { 
   background: radial-gradient(circle at 30% 30%, #e25a49 0%, var(--tile-red) 60%); 
@@ -257,7 +258,7 @@ h1, h2, h3 {
     radial-gradient(circle at center, var(--tile-cyan) 1.5px, transparent 2px),
     linear-gradient(45deg, transparent 48%, rgba(244, 237, 224, 0.25) 48%, rgba(244, 237, 224, 0.25) 52%, transparent 52%),
     linear-gradient(-45deg, transparent 48%, rgba(244, 237, 224, 0.25) 48%, rgba(244, 237, 224, 0.25) 52%, transparent 52%);
-  background-size: 10px 10px;
+  background-size: 31.25% 31.25%;
 }
 .tile--cyan {
   background-color: var(--tile-cyan);
@@ -266,7 +267,7 @@ h1, h2, h3 {
     linear-gradient(-45deg, transparent 45%, #fff 45%, #fff 55%, transparent 55%),
     linear-gradient(90deg, transparent 48%, #fff 48%, #fff 52%, transparent 52%),
     linear-gradient(0deg, transparent 48%, #fff 48%, #fff 52%, transparent 52%);
-  background-size: 16px 16px;
+  background-size: 50% 50%;
   background-position: center;
 }
 .tile--empty { background: transparent; box-shadow: inset 0 0 0 2px var(--cream-deep); }
@@ -282,16 +283,6 @@ h1, h2, h3 {
 .selection-bar span { display: block; }
 .selection-bar span#selection-label { font-weight: 600; margin-bottom: 4px; }
 .selection-hint { font-size: 0.85rem; color: #6b7a85; }
-/*.line-choice-btn:disabled {
-  border-color: #d1d8de;
-  background: #f4f6f8;
-  color: #8a97a1;
-  cursor: not-allowed;
-  opacity: 0.7;
-}
-.line-choice-btn:disabled:hover {
-  background: #f4f6f8;
-}*/
 
 .log-panel {
   max-height: 220px;
@@ -373,6 +364,19 @@ h1, h2, h3 {
   box-shadow: inset 0 0 0 2px rgba(255,255,255,0.35);
 }
 .wall-cell.empty { opacity: 0.22; }
+
+/* Applied explicitly (via JS) only to tiles that are actually new since the last render. */
+.tile-pop { animation: tile-pop 260ms cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+
+@keyframes tile-pop {
+  0% { opacity: 0; transform: scale(0.35); }
+  60% { opacity: 1; transform: scale(1.15); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tile-pop { animation: none; }
+}
 
 .floor-line {
   display: flex;

@@ -13,6 +13,7 @@ const AppState = {
   gameId: null,
   playerId: null,
   state: null,
+  prevState: null,
   socket: null,
 };
 
@@ -55,15 +56,56 @@ function joinSocketRoom(gameId) {
   }
 }
 
+// ---------- State diffing (drives which tiles animate as "new") ----------
+
+function countByColor(colors) {
+  return colors.reduce((acc, c) => { acc[c] = (acc[c] || 0) + 1; return acc; }, {});
+}
+
+/** Returns null if there is nothing to compare against (first render) — callers then skip animation. */
+function computeDiff(prevState, newState) {
+  if (!prevState) return null;
+
+  const diff = { factories: [], centerNewCounts: {}, markerNew: false, players: {} };
+
+  newState.factories.forEach((tiles, idx) => {
+    const prevTiles = (prevState.factories && prevState.factories[idx]) || [];
+    diff.factories[idx] = prevTiles.length === 0 && tiles.length > 0;
+  });
+
+  const prevCenterCounts = countByColor(prevState.center || []);
+  const newCenterCounts = countByColor(newState.center || []);
+  Object.keys(newCenterCounts).forEach((color) => {
+    const delta = newCenterCounts[color] - (prevCenterCounts[color] || 0);
+    if (delta > 0) diff.centerNewCounts[color] = delta;
+  });
+  diff.markerNew = !prevState.centerMarkerAvailable && newState.centerMarkerAvailable;
+
+  newState.players.forEach((p) => {
+    const prevP = (prevState.players || []).find((pp) => pp.playerId === p.playerId);
+    diff.players[p.playerId] = {
+      patternLinePrevLengths: [0, 1, 2, 3, 4].map((rowIdx) =>
+        prevP ? prevP.patternLines[rowIdx].length : 0
+      ),
+      wallPrevFilled: p.wall.map((row, r) => row.map((_, c) => !!(prevP && prevP.wall[r][c]))),
+      floorPrevLength: prevP ? prevP.floorLine.length : 0,
+    };
+  });
+
+  return diff;
+}
+
 // ---------- State handling ----------
 
 function onStateUpdate(state) {
+  const diff = computeDiff(AppState.state, state);
+  AppState.prevState = AppState.state;
   AppState.state = state;
   persistSession();
-  render();
+  render(diff);
 }
 
-function render() {
+function render(diff) {
   const state = AppState.state;
   if (!state) return;
 
@@ -78,14 +120,14 @@ function render() {
     document.getElementById('lobby-hint').hidden = isHost;
   } else if (state.status === 'playing') {
     showView('game');
-    renderGame(state);
+    renderGame(state, diff);
   } else if (state.status === 'finished') {
     showView('end');
     Render.endScreen(state, AppState.playerId, document.getElementById('end-scores'), document.getElementById('end-title'));
   }
 }
 
-function renderGame(state) {
+function renderGame(state, diff) {
   const myPlayerId = AppState.playerId;
   const isMyTurn = state.currentPlayerId === myPlayerId && !state.pendingSelection;
   const isMyPendingTurn = state.currentPlayerId === myPlayerId && !!state.pendingSelection;
@@ -95,11 +137,13 @@ function renderGame(state) {
   Render.factories(state, document.getElementById('factories'), {
     canInteract: isMyTurn,
     onPick: (factoryIndex, color) => doAction(() => Api.pickFromFactory(AppState.gameId, myPlayerId, factoryIndex, color)),
+    diff,
   });
 
   Render.center(state, document.getElementById('center-tiles'), {
     canInteract: isMyTurn,
     onPick: (color) => doAction(() => Api.pickFromCenter(AppState.gameId, myPlayerId, color)),
+    diff,
   });
 
   Render.selectionBar(
@@ -115,6 +159,7 @@ function renderGame(state) {
   Render.playerBoards(state, myPlayerId, document.getElementById('players-column'), {
     isMyPendingTurn,
     onChooseLine: (lineIndex) => doAction(() => Api.placeSelection(AppState.gameId, myPlayerId, lineIndex)),
+    diff,
   });
 }
 
@@ -216,6 +261,7 @@ document.getElementById('btn-back-home').addEventListener('click', () => {
   AppState.gameId = null;
   AppState.playerId = null;
   AppState.state = null;
+  AppState.prevState = null;
   showView('home');
 });
 

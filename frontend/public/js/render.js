@@ -4,16 +4,16 @@ const COLOR_LABELS = {
   blue: 'blu', yellow: 'giallo', red: 'rosso', black: 'nero', cyan: 'ciano',
 };
 
-function tileEl(color, { clickable = false, ghost = false } = {}) {
+function tileEl(color, { clickable = false, ghost = false, pop = false } = {}) {
   const el = document.createElement('div');
-  el.className = `tile tile--${color}` + (clickable ? ' clickable' : '') + (ghost ? ' tile--ghost' : '');
+  el.className = `tile tile--${color}` + (clickable ? ' clickable' : '') + (ghost ? ' tile--ghost' : '') + (pop ? ' tile-pop' : '');
   el.title = COLOR_LABELS[color] || color;
   return el;
 }
 
-function markerEl() {
+function markerEl({ pop = false } = {}) {
   const el = document.createElement('div');
-  el.className = 'tile marker';
+  el.className = 'tile marker' + (pop ? ' tile-pop' : '');
   el.title = 'Segnalino primo giocatore';
   return el;
 }
@@ -42,16 +42,17 @@ const Render = {
     el.classList.toggle('mine', mine);
   },
 
-  factories(state, container, { canInteract, onPick }) {
+  factories(state, container, { canInteract, onPick, diff }) {
     container.innerHTML = '';
     state.factories.forEach((tiles, idx) => {
       const factory = document.createElement('div');
       factory.className = 'factory';
+      const isFreshlyFilled = !!(diff && diff.factories[idx]);
       if (tiles.length === 0) {
         for (let i = 0; i < 4; i += 1) factory.appendChild(emptySlotEl());
       } else {
         tiles.forEach((color) => {
-          const el = tileEl(color, { clickable: canInteract });
+          const el = tileEl(color, { clickable: canInteract, pop: isFreshlyFilled });
           if (canInteract) el.addEventListener('click', () => onPick(idx, color));
           factory.appendChild(el);
         });
@@ -60,9 +61,9 @@ const Render = {
     });
   },
 
-  center(state, container, { canInteract, onPick }) {
+  center(state, container, { canInteract, onPick, diff }) {
     container.innerHTML = '';
-    if (state.centerMarkerAvailable) container.appendChild(markerEl());
+    if (state.centerMarkerAvailable) container.appendChild(markerEl({ pop: !!(diff && diff.markerNew) }));
     if (state.center.length === 0 && !state.centerMarkerAvailable) {
       const span = document.createElement('span');
       span.className = 'muted';
@@ -70,14 +71,19 @@ const Render = {
       container.appendChild(span);
       return;
     }
+    const remainingNew = diff ? { ...diff.centerNewCounts } : {};
     state.center.forEach((color) => {
-      const el = tileEl(color, { clickable: canInteract });
+      let pop = false;
+      if (remainingNew[color] > 0) {
+        pop = true;
+        remainingNew[color] -= 1;
+      }
+      const el = tileEl(color, { clickable: canInteract, pop });
       if (canInteract) el.addEventListener('click', () => onPick(color));
       container.appendChild(el);
     });
   },
 
-  
   selectionBar({ bar, label }, state, isMyTurn) {
     const showIt = isMyTurn && state.pendingSelection;
     bar.hidden = !showIt;
@@ -86,6 +92,7 @@ const Render = {
     label.textContent = `Hai preso ${count} tessera/e ${COLOR_LABELS[color] || color}.`;
   },
 
+  /** Whether a pattern line can currently accept the pending color (mirrors PlayerBoard.canAddToLine). */
   canPlaceOnLine(board, lineIndex, color) {
     const line = board.patternLines[lineIndex];
     const capacity = lineIndex + 1;
@@ -105,7 +112,7 @@ const Render = {
   },
 
   playerBoards(state, myPlayerId, container, interaction = {}) {
-    const { isMyPendingTurn = false, onChooseLine = () => {} } = interaction;
+    const { isMyPendingTurn = false, onChooseLine = () => {}, diff = null } = interaction;
     const pendingColor = state.pendingSelection ? state.pendingSelection.color : null;
 
     container.innerHTML = '';
@@ -118,6 +125,8 @@ const Render = {
 
     ordered.forEach((p) => {
       const isMe = p.playerId === myPlayerId;
+      const pdiff = diff && diff.players[p.playerId];
+
       const wrap = document.createElement('div');
       wrap.className = 'player-board';
       if (p.playerId === state.currentPlayerId) wrap.classList.add('active');
@@ -144,8 +153,9 @@ const Render = {
         const rowEl = document.createElement('div');
         rowEl.className = 'pattern-line';
         const capacity = rowIdx + 1;
+        const prevLen = pdiff ? pdiff.patternLinePrevLengths[rowIdx] : line.length;
         for (let i = 0; i < capacity; i += 1) {
-          rowEl.appendChild(i < line.length ? tileEl(line[i]) : emptySlotEl());
+          rowEl.appendChild(i < line.length ? tileEl(line[i], { pop: i >= prevLen }) : emptySlotEl());
         }
 
         if (isMe && isMyPendingTurn) {
@@ -172,7 +182,8 @@ const Render = {
         row.forEach((cell, c) => {
           const cellEl = document.createElement('div');
           if (cell) {
-            cellEl.className = `wall-cell tile--${cell}`;
+            const wasAlreadyFilled = pdiff ? pdiff.wallPrevFilled[r][c] : true;
+            cellEl.className = `wall-cell tile--${cell}` + (wasAlreadyFilled ? '' : ' tile-pop');
           } else {
             cellEl.className = `wall-cell tile--${WALL_PATTERN[r][c]} empty`;
           }
@@ -187,11 +198,16 @@ const Render = {
       const floorWrap = document.createElement('div');
       floorWrap.className = 'floor-line';
       const penalties = [-1, -1, -2, -2, -2, -3, -3];
+      const floorPrevLen = pdiff ? pdiff.floorPrevLength : 7;
       for (let i = 0; i < 7; i += 1) {
         const slot = document.createElement('div');
         const token = p.floorLine[i];
+        const isNew = i >= floorPrevLen;
         if (token) {
-          slot.className = 'floor-slot ' + (token.type === 'marker' ? 'tile marker' : `tile tile--${token.color}`);
+          slot.className =
+            'floor-slot ' +
+            (token.type === 'marker' ? 'tile marker' : `tile tile--${token.color}`) +
+            (isNew ? ' tile-pop' : '');
         } else {
           slot.className = 'floor-slot';
           slot.textContent = penalties[i];
