@@ -103,6 +103,7 @@ const Render = {
   },
 
   log(state, container) {
+    if (!container || !state || !state.log) return;
     container.innerHTML = '';
     [...state.log].reverse().forEach((entry) => {
       const li = document.createElement('li');
@@ -248,6 +249,62 @@ const Render = {
       li.appendChild(score);
       container.appendChild(li);
     });
+  },
+
+  chatMessage(entry, myPlayerId) {
+    const isMe = entry.playerId === myPlayerId;
+    const item = document.createElement('div');
+    item.className = 'chat-msg' + (isMe ? ' me' : '') + (entry.system ? ' system' : '');
+
+    const timeStr = entry.timestamp
+      ? new Date(entry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      : '';
+
+    if (entry.system) {
+      item.textContent = entry.message;
+      if (timeStr) {
+        const timeSpan = document.createElement('span');
+        timeSpan.className = 'chat-msg-time';
+        timeSpan.textContent = ` (${timeStr})`;
+        item.appendChild(timeSpan);
+      }
+      return item;
+    }
+
+    const senderSpan = document.createElement('span');
+    senderSpan.className = 'chat-msg-sender';
+    senderSpan.textContent = entry.senderName + (isMe ? ' (tu)' : '') + ': ';
+
+    const textSpan = document.createElement('span');
+    textSpan.className = 'chat-msg-text';
+    textSpan.textContent = entry.message;
+
+    const timeSpan = document.createElement('span');
+    timeSpan.className = 'chat-msg-time';
+    timeSpan.textContent = timeStr;
+
+    item.appendChild(senderSpan);
+    item.appendChild(textSpan);
+    item.appendChild(timeSpan);
+    return item;
+  },
+
+  chat(messages, container, myPlayerId) {
+    if (!container) return;
+    container.innerHTML = '';
+    (messages || []).forEach((entry) => {
+      container.appendChild(Render.chatMessage(entry, myPlayerId));
+    });
+    container.scrollTop = container.scrollHeight;
+  },
+
+  appendChatMessage(entry, container, myPlayerId) {
+    if (!container) return;
+    const shouldScroll = container.scrollHeight - container.scrollTop <= container.clientHeight + 60;
+    container.appendChild(Render.chatMessage(entry, myPlayerId));
+    if (shouldScroll) {
+      container.scrollTop = container.scrollHeight;
+    }
   },
 };
 

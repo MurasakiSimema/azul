@@ -14,5 +14,6 @@ router.post('/games/:id/leave', controller.leaveGame);
 router.post('/games/:id/action/pick-factory', controller.pickFromFactory);
 router.post('/games/:id/action/pick-center', controller.pickFromCenter);
 router.post('/games/:id/action/place', controller.placeSelection);
+router.post('/games/:id/chat', controller.sendChat);
 
 module.exports = router;

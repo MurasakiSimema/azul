@@ -86,3 +86,13 @@ exports.placeSelection = safe((req, res) => {
   broadcast(req, game);
   res.json({ state: game.toJSON() });
 });
+
+exports.sendChat = safe((req, res) => {
+  const { id } = req.params;
+  const { playerId, message } = req.body || {};
+  const game = gameManager.getGame(id);
+  const chatEntry = game.addChatMessage(playerId, message);
+  const io = req.app.get('io');
+  if (io) io.to(id).emit('chat-message', chatEntry);
+  res.status(201).json({ chatEntry });
+});

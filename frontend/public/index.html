@@ -63,6 +63,17 @@
       <ul id="lobby-players" class="player-list"></ul>
       <button id="btn-start" class="btn btn--primary" hidden>Inizia la partita</button>
       <p class="muted" id="lobby-hint">In attesa che l'host avvii la partita&hellip;</p>
+
+      <div class="chat-panel chat-panel--lobby">
+        <div class="chat-header">
+          <h3>Chat</h3>
+        </div>
+        <div id="lobby-chat-messages" class="chat-messages"></div>
+        <form id="lobby-chat-form" class="chat-input-row">
+          <input type="text" id="lobby-chat-input" placeholder="Scrivi un messaggio..." maxlength="300" autocomplete="off" />
+          <button type="submit" class="btn btn--secondary btn--sm">Invia</button>
+        </form>
+      </div>
     </div>
   </section>
 
@@ -85,9 +96,22 @@
           <span class="selection-hint">Clicca su una riga della tua plancia qui sotto per posizionarle.</span>
         </div>
 
-        <div id="log-panel" class="log-panel">
-          <h3>Cronologia</h3>
-          <ul id="log-list"></ul>
+        <div class="game-bottom-panels">
+          <div id="log-panel" class="log-panel">
+            <h3>Cronologia</h3>
+            <ul id="log-list"></ul>
+          </div>
+
+          <div id="game-chat-panel" class="chat-panel">
+            <div class="chat-header">
+              <h3>Chat</h3>
+            </div>
+            <div id="game-chat-messages" class="chat-messages"></div>
+            <form id="game-chat-form" class="chat-input-row">
+              <input type="text" id="game-chat-input" placeholder="Scrivi un messaggio..." maxlength="300" autocomplete="off" />
+              <button type="submit" class="btn btn--secondary btn--sm">Invia</button>
+            </form>
+          </div>
         </div>
       </div>
 
@@ -101,7 +125,24 @@
     <div class="card card--wide">
       <h2 id="end-title">Partita conclusa</h2>
       <ol id="end-scores" class="score-list"></ol>
-      <button id="btn-back-home" class="btn btn--primary">Torna alla home</button>
+
+      <div class="chat-panel chat-panel--end">
+        <div class="chat-header">
+          <h3>Chat</h3>
+        </div>
+        <div id="end-chat-messages" class="chat-messages"></div>
+        <form id="end-chat-form" class="chat-input-row">
+          <input type="text" id="end-chat-input" placeholder="Scrivi un messaggio..." maxlength="300" autocomplete="off" />
+          <button type="submit" class="btn btn--secondary btn--sm">Invia</button>
+        </form>
+      </div>
+
+      <div id="end-log-panel" class="log-panel log-panel--end">
+        <h3>Cronologia partita</h3>
+        <ul id="end-log-list"></ul>
+      </div>
+
+      <button id="btn-back-home" class="btn btn--primary" style="margin-top: 18px;">Torna alla home</button>
     </div>
   </section>
 

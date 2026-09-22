@@ -47,10 +47,50 @@ class Game {
 
     this.winnerIds = [];
     this.log = [];
+    this.chat = [];
 
     if (hostName) {
       this.addPlayer(hostName);
     }
+  }
+
+  // ---------- Chat ----------
+
+  addChatMessage(playerId, message, isSystem = false) {
+    if (!message || typeof message !== 'string') {
+      throw new GameError('Message cannot be empty.');
+    }
+    const trimmed = message.trim();
+    if (!trimmed) {
+      throw new GameError('Message cannot be empty.');
+    }
+    if (trimmed.length > 300) {
+      throw new GameError('Message too long (max 300 characters).');
+    }
+
+    let senderName = 'Sistema';
+    if (!isSystem) {
+      const player = this.players.find((p) => p.playerId === playerId);
+      if (!player) {
+        throw new GameError('Player not in game.');
+      }
+      senderName = player.name;
+    }
+
+    const chatEntry = {
+      id: uuidv4(),
+      playerId: isSystem ? 'system' : playerId,
+      senderName,
+      message: trimmed,
+      timestamp: Date.now(),
+      system: !!isSystem,
+    };
+
+    this.chat.push(chatEntry);
+    if (this.chat.length > 100) {
+      this.chat.shift();
+    }
+    return chatEntry;
   }
 
   // ---------- Lobby ----------
@@ -63,6 +103,7 @@ class Game {
     this.players.push(board);
     this.playerOrder.push(playerId);
     if (!this.hostId) this.hostId = playerId;
+    this.addChatMessage(playerId, `${board.name} si è unito alla partita.`, true);
     return playerId;
   }
 
@@ -82,6 +123,7 @@ class Game {
     this.currentPlayerIndex = Math.floor(Math.random() * this.players.length);
     this.startingPlayerIndexNextRound = this.currentPlayerIndex;
     this.roundNumber = 0;
+    this.addChatMessage('system', 'La partita è iniziata!', true);
     this.startRound();
   }
 
@@ -261,13 +303,12 @@ class Game {
       contenders = contenders.filter((p) => p.countCompleteHorizontalLines() === bestLines);
     }
     this.winnerIds = contenders.map((p) => p.playerId);
-    this._addLog(
-      `Game over! Winner${this.winnerIds.length > 1 ? 's' : ''}: ` +
-        this.players
-          .filter((p) => this.winnerIds.includes(p.playerId))
-          .map((p) => p.name)
-          .join(', ')
-    );
+    const winnersStr = this.players
+      .filter((p) => this.winnerIds.includes(p.playerId))
+      .map((p) => p.name)
+      .join(', ');
+    this._addLog(`Game over! Winner${this.winnerIds.length > 1 ? 's' : ''}: ${winnersStr}`);
+    this.addChatMessage('system', `Partita conclusa! Vincitore${this.winnerIds.length > 1 ? 'i' : ''}: ${winnersStr}`, true);
   }
 
   _addLog(message) {
@@ -296,6 +337,7 @@ class Game {
       roundNumber: this.roundNumber,
       winnerIds: this.winnerIds,
       log: this.log.slice(-30),
+      chat: this.chat.slice(-50),
     };
   }
 }

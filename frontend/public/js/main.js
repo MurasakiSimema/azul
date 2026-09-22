@@ -15,6 +15,7 @@ const AppState = {
   state: null,
   prevState: null,
   socket: null,
+  chat: [],
 };
 
 const views = {
@@ -47,6 +48,7 @@ function connectSocket() {
   });
   socket.on('disconnect', () => setConnectionPill(false));
   socket.on('state', (state) => onStateUpdate(state));
+  socket.on('chat-message', (entry) => onChatMessage(entry));
 }
 
 function joinSocketRoom(gameId) {
@@ -101,6 +103,9 @@ function onStateUpdate(state) {
   const diff = computeDiff(AppState.state, state);
   AppState.prevState = AppState.state;
   AppState.state = state;
+  if (Array.isArray(state.chat)) {
+    AppState.chat = state.chat;
+  }
   persistSession();
   render(diff);
 }
@@ -118,12 +123,16 @@ function render(diff) {
     startBtn.hidden = !isHost;
     startBtn.disabled = state.players.length < 2;
     document.getElementById('lobby-hint').hidden = isHost;
+    renderAllChats();
   } else if (state.status === 'playing') {
     showView('game');
     renderGame(state, diff);
+    renderAllChats();
   } else if (state.status === 'finished') {
     showView('end');
     Render.endScreen(state, AppState.playerId, document.getElementById('end-scores'), document.getElementById('end-title'));
+    Render.log(state, document.getElementById('end-log-list'));
+    renderAllChats();
   }
 }
 
@@ -262,6 +271,7 @@ document.getElementById('btn-back-home').addEventListener('click', () => {
   AppState.playerId = null;
   AppState.state = null;
   AppState.prevState = null;
+  AppState.chat = [];
   showView('home');
 });
 
@@ -270,6 +280,74 @@ function setHomeError(message) {
   el.textContent = message;
   el.hidden = false;
 }
+
+// ---------- Chat handling ----------
+
+function onChatMessage(entry) {
+  if (!entry || !entry.id) return;
+  if (!AppState.chat.some((m) => m.id === entry.id)) {
+    AppState.chat.push(entry);
+    if (AppState.chat.length > 100) AppState.chat.shift();
+  }
+  appendChatToAll(entry);
+}
+
+function sendChat(text) {
+  if (!text || !AppState.gameId || !AppState.playerId) return;
+  const trimmed = text.trim();
+  if (!trimmed) return;
+
+  if (AppState.socket && AppState.socket.connected) {
+    AppState.socket.emit('send-chat', {
+      gameId: AppState.gameId,
+      playerId: AppState.playerId,
+      message: trimmed,
+    });
+  } else {
+    Api.sendChat(AppState.gameId, AppState.playerId, trimmed).catch((err) => {
+      showTransientError(err.message);
+    });
+  }
+}
+
+const chatContainers = ['lobby-chat-messages', 'game-chat-messages', 'end-chat-messages'];
+
+function renderAllChats() {
+  chatContainers.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el && !el.closest('.view[hidden]')) {
+      Render.chat(AppState.chat, el, AppState.playerId);
+    }
+  });
+}
+
+function appendChatToAll(entry) {
+  chatContainers.forEach((id) => {
+    const el = document.getElementById(id);
+    if (el) {
+      Render.appendChatMessage(entry, el, AppState.playerId);
+    }
+  });
+}
+
+function setupChatForm(formId, inputId) {
+  const form = document.getElementById(formId);
+  const input = document.getElementById(inputId);
+  if (!form || !input) return;
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = input.value;
+    if (text.trim()) {
+      sendChat(text);
+      input.value = '';
+    }
+    input.focus();
+  });
+}
+
+setupChatForm('lobby-chat-form', 'lobby-chat-input');
+setupChatForm('game-chat-form', 'game-chat-input');
+setupChatForm('end-chat-form', 'end-chat-input');
 
 // ---------- Boot ----------
 

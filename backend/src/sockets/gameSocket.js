@@ -18,5 +18,19 @@ module.exports = function registerGameSocket(io) {
     socket.on('leave-room', ({ gameId }) => {
       if (gameId) socket.leave(gameId);
     });
+
+    const handleChat = ({ gameId, playerId, message }) => {
+      if (!gameId || !playerId || !message) return;
+      try {
+        const game = gameManager.getGame(gameId);
+        const chatEntry = game.addChatMessage(playerId, message);
+        io.to(gameId).emit('chat-message', chatEntry);
+      } catch (err) {
+        socket.emit('error-message', err.message);
+      }
+    };
+
+    socket.on('send-chat', handleChat);
+    socket.on('chat-message', handleChat);
   });
 };

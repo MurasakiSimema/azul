@@ -29,6 +29,8 @@ const Api = {
     request(`/games/${gameId}/action/pick-center`, { method: 'POST', body: { playerId, color } }),
   placeSelection: (gameId, playerId, lineIndex) =>
     request(`/games/${gameId}/action/place`, { method: 'POST', body: { playerId, lineIndex } }),
+  sendChat: (gameId, playerId, message) =>
+    request(`/games/${gameId}/chat`, { method: 'POST', body: { playerId, message } }),
 };
 
 window.Api = Api;
