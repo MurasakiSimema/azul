@@ -12,6 +12,7 @@ window.AzulConstants = {
 const AppState = {
   gameId: null,
   playerId: null,
+  playerToken: null,
   state: null,
   prevState: null,
   socket: null,
@@ -145,13 +146,15 @@ function renderGame(state, diff) {
 
   Render.factories(state, document.getElementById('factories'), {
     canInteract: isMyTurn,
-    onPick: (factoryIndex, color) => doAction(() => Api.pickFromFactory(AppState.gameId, myPlayerId, factoryIndex, color)),
+    onPick: (factoryIndex, color) =>
+      doAction(() => Api.pickFromFactory(AppState.gameId, myPlayerId, factoryIndex, color, AppState.playerToken)),
     diff,
   });
 
   Render.center(state, document.getElementById('center-tiles'), {
     canInteract: isMyTurn,
-    onPick: (color) => doAction(() => Api.pickFromCenter(AppState.gameId, myPlayerId, color)),
+    onPick: (color) =>
+      doAction(() => Api.pickFromCenter(AppState.gameId, myPlayerId, color, AppState.playerToken)),
     diff,
   });
 
@@ -167,7 +170,8 @@ function renderGame(state, diff) {
   Render.log(state, document.getElementById('log-list'));
   Render.playerBoards(state, myPlayerId, document.getElementById('players-column'), {
     isMyPendingTurn,
-    onChooseLine: (lineIndex) => doAction(() => Api.placeSelection(AppState.gameId, myPlayerId, lineIndex)),
+    onChooseLine: (lineIndex) =>
+      doAction(() => Api.placeSelection(AppState.gameId, myPlayerId, lineIndex, AppState.playerToken)),
     diff,
   });
 }
@@ -202,8 +206,15 @@ function showTransientError(message) {
 // ---------- Session persistence (survive refresh) ----------
 
 function persistSession() {
-  if (AppState.gameId && AppState.playerId) {
-    sessionStorage.setItem('azul-session', JSON.stringify({ gameId: AppState.gameId, playerId: AppState.playerId }));
+  if (AppState.gameId && AppState.playerId && AppState.playerToken) {
+    sessionStorage.setItem(
+      'azul-session',
+      JSON.stringify({
+        gameId: AppState.gameId,
+        playerId: AppState.playerId,
+        playerToken: AppState.playerToken,
+      })
+    );
   }
 }
 
@@ -211,10 +222,11 @@ function restoreSession() {
   const raw = sessionStorage.getItem('azul-session');
   if (!raw) return false;
   try {
-    const { gameId, playerId } = JSON.parse(raw);
-    if (!gameId || !playerId) return false;
+    const { gameId, playerId, playerToken } = JSON.parse(raw);
+    if (!gameId || !playerId || !playerToken) return false;
     AppState.gameId = gameId;
     AppState.playerId = playerId;
+    AppState.playerToken = playerToken;
     Api.getGame(gameId)
       .then(({ state }) => {
         if (!state.players.some((p) => p.playerId === playerId)) throw new Error('gone');
@@ -236,9 +248,10 @@ function restoreSession() {
 document.getElementById('btn-create').addEventListener('click', async () => {
   const name = document.getElementById('create-name').value.trim() || 'Host';
   try {
-    const { gameId, playerId, state } = await Api.createGame(name);
+    const { gameId, playerId, playerToken, state } = await Api.createGame(name);
     AppState.gameId = gameId;
     AppState.playerId = playerId;
+    AppState.playerToken = playerToken;
     onStateUpdate(state);
     joinSocketRoom(gameId);
   } catch (err) {
@@ -251,9 +264,10 @@ document.getElementById('btn-join').addEventListener('click', async () => {
   const name = document.getElementById('join-name').value.trim() || 'Giocatore';
   if (!code) { setHomeError('Inserisci il codice partita.'); return; }
   try {
-    const { gameId, playerId, state } = await Api.joinGame(code, name);
+    const { gameId, playerId, playerToken, state } = await Api.joinGame(code, name);
     AppState.gameId = gameId;
     AppState.playerId = playerId;
+    AppState.playerToken = playerToken;
     onStateUpdate(state);
     joinSocketRoom(gameId);
   } catch (err) {
@@ -262,13 +276,14 @@ document.getElementById('btn-join').addEventListener('click', async () => {
 });
 
 document.getElementById('btn-start').addEventListener('click', () => {
-  doAction(() => Api.startGame(AppState.gameId));
+  doAction(() => Api.startGame(AppState.gameId, AppState.playerToken));
 });
 
 document.getElementById('btn-back-home').addEventListener('click', () => {
   sessionStorage.removeItem('azul-session');
   AppState.gameId = null;
   AppState.playerId = null;
+  AppState.playerToken = null;
   AppState.state = null;
   AppState.prevState = null;
   AppState.chat = [];
@@ -293,7 +308,7 @@ function onChatMessage(entry) {
 }
 
 function sendChat(text) {
-  if (!text || !AppState.gameId || !AppState.playerId) return;
+  if (!text || !AppState.gameId || !AppState.playerId || !AppState.playerToken) return;
   const trimmed = text.trim();
   if (!trimmed) return;
 
@@ -301,10 +316,11 @@ function sendChat(text) {
     AppState.socket.emit('send-chat', {
       gameId: AppState.gameId,
       playerId: AppState.playerId,
+      playerToken: AppState.playerToken,
       message: trimmed,
     });
   } else {
-    Api.sendChat(AppState.gameId, AppState.playerId, trimmed).catch((err) => {
+    Api.sendChat(AppState.gameId, AppState.playerId, trimmed, AppState.playerToken).catch((err) => {
       showTransientError(err.message);
     });
   }

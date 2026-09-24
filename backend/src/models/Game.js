@@ -1,5 +1,6 @@
 'use strict';
 
+const crypto = require('crypto');
 const { v4: uuidv4 } = require('uuid');
 const { createFullBag, COLORS } = require('./Tile');
 const PlayerBoard = require('./PlayerBoard');
@@ -17,10 +18,10 @@ function shuffle(array) {
 }
 
 class GameError extends Error {
-  constructor(message) {
+  constructor(message, status = 400) {
     super(message);
     this.name = 'GameError';
-    this.status = 400;
+    this.status = status;
   }
 }
 
@@ -30,6 +31,8 @@ class Game {
     this.status = 'lobby'; // lobby | playing | finished
     this.players = []; // PlayerBoard[]
     this.playerOrder = []; // playerId[]
+    this.playerTokens = new Map(); // playerId -> secretToken
+    this.initialHostToken = null;
     this.hostId = null;
 
     this.bag = [];
@@ -50,7 +53,37 @@ class Game {
     this.chat = [];
 
     if (hostName) {
-      this.addPlayer(hostName);
+      const { playerToken } = this.addPlayer(hostName);
+      this.initialHostToken = playerToken;
+    }
+  }
+
+  // ---------- Credentials & Authorization ----------
+
+  getPlayerToken(playerId) {
+    return this.playerTokens.get(playerId) || null;
+  }
+
+  assertPlayerToken(playerId, token) {
+    if (!playerId || !token) {
+      throw new GameError('Unauthorized: missing player credentials.', 401);
+    }
+    const expected = this.playerTokens.get(playerId);
+    if (!expected || expected !== token) {
+      throw new GameError('Forbidden: invalid player credentials.', 403);
+    }
+  }
+
+  assertHostToken(token) {
+    if (!this.hostId) {
+      throw new GameError('No host assigned to this game.', 400);
+    }
+    if (!token) {
+      throw new GameError('Unauthorized: missing host credentials.', 401);
+    }
+    const expected = this.playerTokens.get(this.hostId);
+    if (!expected || expected !== token) {
+      throw new GameError('Forbidden: only the host can perform this action.', 403);
     }
   }
 
@@ -99,18 +132,21 @@ class Game {
     if (this.status !== 'lobby') throw new GameError('Game already started.');
     if (this.players.length >= MAX_PLAYERS) throw new GameError('Game is full.');
     const playerId = uuidv4();
+    const playerToken = crypto.randomBytes(24).toString('hex');
+    this.playerTokens.set(playerId, playerToken);
     const board = new PlayerBoard(playerId, name || `Player ${this.players.length + 1}`);
     this.players.push(board);
     this.playerOrder.push(playerId);
     if (!this.hostId) this.hostId = playerId;
     this.addChatMessage(playerId, `${board.name} si è unito alla partita.`, true);
-    return playerId;
+    return { playerId, playerToken };
   }
 
   removePlayer(playerId) {
     if (this.status !== 'lobby') return;
     this.players = this.players.filter((p) => p.playerId !== playerId);
     this.playerOrder = this.playerOrder.filter((id) => id !== playerId);
+    this.playerTokens.delete(playerId);
     if (this.hostId === playerId) this.hostId = this.playerOrder[0] || null;
   }
 

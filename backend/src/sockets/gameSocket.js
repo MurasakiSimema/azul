@@ -19,10 +19,11 @@ module.exports = function registerGameSocket(io) {
       if (gameId) socket.leave(gameId);
     });
 
-    const handleChat = ({ gameId, playerId, message }) => {
+    const handleChat = ({ gameId, playerId, playerToken, message }) => {
       if (!gameId || !playerId || !message) return;
       try {
         const game = gameManager.getGame(gameId);
+        game.assertPlayerToken(playerId, playerToken);
         const chatEntry = game.addChatMessage(playerId, message);
         io.to(gameId).emit('chat-message', chatEntry);
       } catch (err) {

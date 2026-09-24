@@ -273,8 +273,8 @@ This report documents the vulnerabilities, rule discrepancies, stability bugs, a
 ## 7. Remediation Priority Checklist
 
 - [ ] **Fix floor overflow tile leak** in `PlayerBoard.js` and `Game.js` to ensure overflow tiles enter `this.lid`.
-- [ ] **Implement authentication tokens** (`playerToken`) to prevent player impersonation and unauthorized game control.
-- [ ] **Restrict `startGame`** endpoint to verify that the requester is `game.hostId`.
+- [x] **Implement authentication tokens** (`playerToken`) to prevent player impersonation and unauthorized game control.
+- [x] **Restrict `startGame`** endpoint to verify that the requester is `game.hostId`.
 - [ ] **Sanitize and validate `lineIndex` and `factoryIndex`** as strict integers to eliminate 500 TypeErrors.
 - [ ] **Emit `leave-room` on socket** when navigating back home from `main.js`.
 - [ ] **Add in-flight action debouncing** (`isBusy`) in `main.js` to eliminate false error toasts.

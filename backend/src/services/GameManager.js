@@ -11,9 +11,13 @@ class GameManager {
 
   createGame(hostName) {
     const id = uuidv4().slice(0, 8);
-    const game = new Game(id, hostName);
+    const game = new Game(id, hostName || 'Host');
     this.games.set(id, game);
-    return game;
+    return {
+      game,
+      hostId: game.hostId,
+      hostToken: game.initialHostToken || game.getPlayerToken(game.hostId),
+    };
   }
 
   getGame(id) {

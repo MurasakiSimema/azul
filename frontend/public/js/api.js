@@ -5,9 +5,16 @@
 const API_BASE = (window.API_BASE_URL || '') + '/api';
 
 async function request(path, options = {}) {
+  const headers = {
+    'Content-Type': 'application/json',
+    ...(options.headers || {}),
+  };
+  if (options.token) {
+    headers['x-player-token'] = options.token;
+  }
   const res = await fetch(API_BASE + path, {
     method: options.method || 'GET',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: options.body ? JSON.stringify(options.body) : undefined,
   });
   const data = await res.json().catch(() => ({}));
@@ -21,16 +28,42 @@ const Api = {
   createGame: (hostName) => request('/games', { method: 'POST', body: { hostName } }),
   joinGame: (gameId, name) => request(`/games/${gameId}/join`, { method: 'POST', body: { name } }),
   getGame: (gameId) => request(`/games/${gameId}`),
-  startGame: (gameId) => request(`/games/${gameId}/start`, { method: 'POST' }),
-  leaveGame: (gameId, playerId) => request(`/games/${gameId}/leave`, { method: 'POST', body: { playerId } }),
-  pickFromFactory: (gameId, playerId, factoryIndex, color) =>
-    request(`/games/${gameId}/action/pick-factory`, { method: 'POST', body: { playerId, factoryIndex, color } }),
-  pickFromCenter: (gameId, playerId, color) =>
-    request(`/games/${gameId}/action/pick-center`, { method: 'POST', body: { playerId, color } }),
-  placeSelection: (gameId, playerId, lineIndex) =>
-    request(`/games/${gameId}/action/place`, { method: 'POST', body: { playerId, lineIndex } }),
-  sendChat: (gameId, playerId, message) =>
-    request(`/games/${gameId}/chat`, { method: 'POST', body: { playerId, message } }),
+  startGame: (gameId, playerToken) =>
+    request(`/games/${gameId}/start`, {
+      method: 'POST',
+      token: playerToken,
+      body: { playerToken },
+    }),
+  leaveGame: (gameId, playerId, playerToken) =>
+    request(`/games/${gameId}/leave`, {
+      method: 'POST',
+      token: playerToken,
+      body: { playerId, playerToken },
+    }),
+  pickFromFactory: (gameId, playerId, factoryIndex, color, playerToken) =>
+    request(`/games/${gameId}/action/pick-factory`, {
+      method: 'POST',
+      token: playerToken,
+      body: { playerId, factoryIndex, color, playerToken },
+    }),
+  pickFromCenter: (gameId, playerId, color, playerToken) =>
+    request(`/games/${gameId}/action/pick-center`, {
+      method: 'POST',
+      token: playerToken,
+      body: { playerId, color, playerToken },
+    }),
+  placeSelection: (gameId, playerId, lineIndex, playerToken) =>
+    request(`/games/${gameId}/action/place`, {
+      method: 'POST',
+      token: playerToken,
+      body: { playerId, lineIndex, playerToken },
+    }),
+  sendChat: (gameId, playerId, message, playerToken) =>
+    request(`/games/${gameId}/chat`, {
+      method: 'POST',
+      token: playerToken,
+      body: { playerId, message, playerToken },
+    }),
 };
 
 window.Api = Api;
